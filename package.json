@@ -1,0 +1,49 @@
+{
+  "name": "magic-qc",
+  "version": "1.0.0",
+  "description": "Industry 4.0 Fabric Quality Inspection System",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run react:dev\" \"npm run electron:dev\"",
+    "react:dev": "vite --port 5174",
+    "electron:dev": "wait-on http://localhost:5174 && node scripts/launch-electron.js",
+    "build": "vite build && electron-builder",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.1",
+    "lucide-react": "^0.344.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "recharts": "^2.12.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.1.4",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.magicqc.app",
+    "productName": "Magic QC",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

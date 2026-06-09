@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+backend/data/*.db
+data/*.db
+recordings/
+exports/
+__pycache__/
+*.pyc
+*.log
+.env
+.venv/
