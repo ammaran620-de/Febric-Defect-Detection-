@@ -25,12 +25,33 @@ function killPortProcess(port) {
   } catch {}
 }
 
+function ensureBackendDependencies(backendPath, pythonExe) {
+  try {
+    execSync(`${pythonExe} -c "import aiosqlite"`, {
+      cwd: backendPath,
+      stdio: 'ignore',
+    })
+  } catch (error) {
+    console.log('[Electron] Installing backend Python dependencies...')
+    try {
+      execSync(`${pythonExe} -m pip install -r requirements.txt --quiet`, {
+        cwd: backendPath,
+        stdio: 'inherit',
+      })
+    } catch (installError) {
+      console.error('[Electron] Failed to install backend dependencies')
+      throw installError
+    }
+  }
+}
+
 function startPythonBackend() {
   const backendPath = path.join(__dirname, '..', 'backend')
   const pythonExe = process.platform === 'win32' ? 'python' : 'python3'
 
   killPortProcess(8000)
   console.log('[Electron] Starting Python backend...')
+  ensureBackendDependencies(backendPath, pythonExe)
 
   pythonProcess = spawn(pythonExe, ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
     cwd: backendPath,

@@ -211,7 +211,6 @@ function UserMenuItem({ icon, label, onClick, danger }) {
         width: '100%', padding: '7px 14px', border: 'none', background: 'none',
         cursor: 'pointer', textAlign: 'left', fontSize: 13,
         color: danger ? '#F87171' : 'var(--text-secondary)',
-        fontSize: 15,
         transition: 'background 0.15s',
       }}
       onMouseEnter={e => e.currentTarget.style.background = danger ? 'rgba(239,68,68,0.08)' : 'var(--hover)'}

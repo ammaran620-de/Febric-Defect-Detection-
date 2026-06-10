@@ -73,8 +73,8 @@ def has_permission(role: str, permission: str) -> bool:
 
 DEFAULT_ADMIN = {
     "username": "admin",
-    "full_name": "System Administrator",
-    "password": "MagicQC@2024",
+    "full_name": "admin",
+    "password": "12345678",
     "role": "admin",
 }
 
@@ -83,6 +83,9 @@ async def ensure_default_admin(db):
     """Create default admin if no users exist."""
     async with db.execute("SELECT COUNT(*) as n FROM users") as cur:
         row = await cur.fetchone()
+    async with db.execute("SELECT id, password_hash FROM users WHERE username=?", (DEFAULT_ADMIN["username"],)) as cur:
+        admin = await cur.fetchone()
+
     if row["n"] == 0:
         pw_hash = hash_password(DEFAULT_ADMIN["password"])
         await db.execute(
@@ -91,7 +94,15 @@ async def ensure_default_admin(db):
             (DEFAULT_ADMIN["username"], DEFAULT_ADMIN["full_name"], pw_hash, DEFAULT_ADMIN["role"]),
         )
         await db.commit()
-        print("[Auth] Default admin created — username: admin / password: MagicQC@2024")
+        print("[Auth] Default admin created — username: admin / password: 12345678")
+    elif row["n"] == 1 and admin and not verify_password(DEFAULT_ADMIN["password"], admin["password_hash"]):
+        pw_hash = hash_password(DEFAULT_ADMIN["password"])
+        await db.execute(
+            "UPDATE users SET password_hash=?, force_password_change=1 WHERE id=?",
+            (pw_hash, admin["id"]),
+        )
+        await db.commit()
+        print("[Auth] Default admin password reset — username: admin / password: 12345678")
 
 
 async def write_audit(db, user_id, username, action, entity=None, entity_id=None, details=None, ip=None):
