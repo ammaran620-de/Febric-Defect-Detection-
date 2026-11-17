@@ -10,3 +10,6 @@ __pycache__/
 *.log
 .env
 .venv/
+
+# local tool settings
+.claude/
