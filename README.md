@@ -28,7 +28,9 @@ Needs Python 3.9+ and Node.js.
 start.bat
 ```
 
-This installs the back-end and front-end dependencies and starts both. Set `MQC_SECRET_KEY` before running anything other than a local demo.
+This installs the back-end and front-end dependencies and starts both.
+
+On first run the app creates an `admin` account. Set `MQC_ADMIN_PASSWORD` to choose its password, or read the random one printed once in the console. You must change it at first login. Set `MQC_SECRET_KEY` for anything other than a local demo; otherwise a random key is stored in `backend/data/secret.key`.
 
 `python backend/test_backend.py` runs a smoke test on a synthetic frame and the database. It checks that the code runs, not that detection is correct.
 
