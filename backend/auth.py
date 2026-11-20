@@ -13,7 +13,34 @@ from datetime import datetime, timedelta
 # Simple JWT-like token using HMAC-SHA256 (no external jose dependency required)
 # Token format: base64(header).base64(payload).signature
 
-SECRET_KEY = os.environ.get("MQC_SECRET_KEY", "fabricguard-secret-change-in-production")
+def _load_secret_key() -> str:
+    """Use MQC_SECRET_KEY if set, else a random key kept in backend/data/secret.key.
+
+    There is no built-in fallback string: a key that ships in the repo is not a secret.
+    """
+    env = os.environ.get("MQC_SECRET_KEY")
+    if env:
+        return env
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "secret.key")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            key = f.read().strip()
+            if key:
+                return key
+    except FileNotFoundError:
+        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    key = secrets.token_urlsafe(48)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(key)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return key
+
+
+SECRET_KEY = _load_secret_key()
 ACCESS_TOKEN_EXPIRE_HOURS = 8
 INACTIVITY_TIMEOUT_MINUTES = 30
 
@@ -71,38 +98,36 @@ def has_permission(role: str, permission: str) -> bool:
     return permission in PERMISSIONS.get(role, [])
 
 
-DEFAULT_ADMIN = {
-    "username": "admin",
-    "full_name": "admin",
-    "password": "12345678",
-    "role": "admin",
-}
+ADMIN_USERNAME = "admin"
 
 
 async def ensure_default_admin(db):
-    """Create default admin if no users exist."""
+    """Create the first admin account if no users exist.
+
+    The password comes from MQC_ADMIN_PASSWORD, or is generated and printed once.
+    Either way the account must change it at first login. An existing admin's
+    password is never reset here.
+    """
     async with db.execute("SELECT COUNT(*) as n FROM users") as cur:
         row = await cur.fetchone()
-    async with db.execute("SELECT id, password_hash FROM users WHERE username=?", (DEFAULT_ADMIN["username"],)) as cur:
-        admin = await cur.fetchone()
+    if row["n"] != 0:
+        return
 
-    if row["n"] == 0:
-        pw_hash = hash_password(DEFAULT_ADMIN["password"])
-        await db.execute(
-            """INSERT INTO users (username, full_name, password_hash, role, force_password_change)
-               VALUES (?, ?, ?, ?, 1)""",
-            (DEFAULT_ADMIN["username"], DEFAULT_ADMIN["full_name"], pw_hash, DEFAULT_ADMIN["role"]),
-        )
-        await db.commit()
-        print("[Auth] Default admin created — username: admin / password: 12345678")
-    elif row["n"] == 1 and admin and not verify_password(DEFAULT_ADMIN["password"], admin["password_hash"]):
-        pw_hash = hash_password(DEFAULT_ADMIN["password"])
-        await db.execute(
-            "UPDATE users SET password_hash=?, force_password_change=1 WHERE id=?",
-            (pw_hash, admin["id"]),
-        )
-        await db.commit()
-        print("[Auth] Default admin password reset — username: admin / password: 12345678")
+    password = os.environ.get("MQC_ADMIN_PASSWORD")
+    generated = not password
+    if generated:
+        password = secrets.token_urlsafe(12)
+    await db.execute(
+        """INSERT INTO users (username, full_name, password_hash, role, force_password_change)
+           VALUES (?, ?, ?, ?, 1)""",
+        (ADMIN_USERNAME, ADMIN_USERNAME, hash_password(password), "admin"),
+    )
+    await db.commit()
+    if generated:
+        print(f"[Auth] First-run admin created. username: {ADMIN_USERNAME}  password: {password}")
+        print("[Auth] This password is shown once. You must change it at first login.")
+    else:
+        print(f"[Auth] First-run admin created from MQC_ADMIN_PASSWORD. username: {ADMIN_USERNAME}")
 
 
 async def write_audit(db, user_id, username, action, entity=None, entity_id=None, details=None, ip=None):
